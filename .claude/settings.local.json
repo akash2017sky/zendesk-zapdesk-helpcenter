@@ -11,7 +11,14 @@
       "WebSearch",
       "WebFetch(domain:developer.zendesk.com)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit - Zapdesk Lightning tipping widget\n\n- React-based Bitcoin Lightning tipping widget for Zendesk Help Center\n- Dynamic QR code generation with real Lightning invoices\n- Configurable tip amounts (100, 1000, 10,000 sats)\n- Integration with Wallet of Satoshi\n- Production build ready for deployment\n\nBuilt with React, Vite, and Lightning Network APIs\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit - Zapdesk Lightning tipping widget\n\n- React-based Bitcoin Lightning tipping widget for Zendesk Help Center\n- Dynamic QR code generation with real Lightning invoices\n- Configurable tip amounts (100, 1000, 10,000 sats)\n- Integration with Wallet of Satoshi\n- Production build ready for deployment\n\nBuilt with React, Vite, and Lightning Network APIs\nEOF\n)\")",
+      "Bash(vercel login)",
+      "Bash(npx vercel --prod)",
+      "Bash(npx vercel --prod --yes)",
+      "WebFetch(domain:zendesk-zapdesk-helpcenter-6h5xwn3zv.vercel.app)",
+      "Bash(npx vercel inspect zendesk-zapdesk-helpcenter-6h5xwn3zv.vercel.app)",
+      "Bash(npx vercel inspect zendesk-zapdesk-helpcenter-6h5xwn3zv.vercel.app --logs)",
+      "Bash(npx vercel inspect zendesk-zapdesk-helpcenter-k3ujyms4s.vercel.app)"
     ],
     "deny": [],
     "ask": []

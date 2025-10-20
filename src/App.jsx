@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { generateLightningQR } from './services/lightning'
 
-// Lightning address - replace with your actual Lightning address
-const LIGHTNING_ADDRESS = 'covertbrian73@walletofsatoshi.com'
+// Default fallback Lightning address if agent doesn't have one configured
+const DEFAULT_LIGHTNING_ADDRESS = 'covertbrian73@walletofsatoshi.com'
 
 function App() {
   const [zafClient, setZafClient] = useState(null)
   const [agent, setAgent] = useState(null)
+  const [lightningAddress, setLightningAddress] = useState(DEFAULT_LIGHTNING_ADDRESS)
   const [selectedSats, setSelectedSats] = useState(100)
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
@@ -21,23 +22,83 @@ function App() {
     setZafClient(client)
 
     if (client) {
-      // Fetch ticket and agent information
-      client.get(['ticket', 'ticket.assignee.user']).then((data) => {
-        const assigneeUser = data['ticket.assignee.user']
-        setAgent({
-          name: assigneeUser.name || 'Agent',
-          email: assigneeUser.email || '',
-          avatarUrl: assigneeUser.avatarUrl || ''
-        })
-        setLoading(false)
+      // Fetch ticket/request information
+      client.get(['ticket']).then(async (data) => {
+        const ticketData = data['ticket']
+        const ticketId = ticketData.id
+
+        console.log('Ticket data:', ticketData)
+
+        try {
+          // Fetch the full request details including assignee from API
+          const requestResponse = await client.request({
+            url: `/api/v2/requests/${ticketId}.json`,
+            type: 'GET'
+          })
+
+          const requestData = JSON.parse(requestResponse.responseText)
+          const request = requestData.request
+          const assigneeId = request.assignee_id
+
+          console.log('Request data:', request)
+          console.log('Assignee ID:', assigneeId)
+
+          if (assigneeId) {
+            // Fetch assignee user details
+            const userResponse = await client.request({
+              url: `/api/v2/users/${assigneeId}.json`,
+              type: 'GET'
+            })
+
+            const userData = JSON.parse(userResponse.responseText)
+            const user = userData.user
+
+            console.log('Assignee user data:', user)
+
+            setAgent({
+              name: user.name || 'Agent',
+              email: user.email || '',
+              avatarUrl: user.photo?.content_url || ''
+            })
+
+            // Check for Lightning address in user fields or notes
+            const agentLightningAddress =
+              user.user_fields?.lightning_address ||
+              user.notes?.match(/lightning:\s*(\S+@\S+)/i)?.[1] ||
+              DEFAULT_LIGHTNING_ADDRESS
+
+            console.log('Agent Lightning address:', agentLightningAddress)
+            setLightningAddress(agentLightningAddress)
+          } else {
+            // No assignee yet
+            setAgent({
+              name: 'Unassigned',
+              email: 'No agent assigned',
+              avatarUrl: ''
+            })
+            setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
+          }
+
+          setLoading(false)
+        } catch (error) {
+          console.error('Error fetching agent info:', error)
+          // Set default agent for testing
+          setAgent({
+            name: 'Support Agent',
+            email: 'agent@knowall.ai',
+            avatarUrl: ''
+          })
+          setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
+          setLoading(false)
+        }
       }).catch((error) => {
-        console.error('Error fetching agent info:', error)
-        // Set default agent for testing
+        console.error('Error fetching ticket:', error)
         setAgent({
           name: 'Support Agent',
           email: 'agent@knowall.ai',
           avatarUrl: ''
         })
+        setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
         setLoading(false)
       })
 
@@ -46,24 +107,27 @@ function App() {
     } else {
       // For development without Zendesk
       setAgent({
-        name: 'Akash Jadhav',
-        email: 'akash.jadhav@knowall.ai',
+        name: 'Test Agent (Dev Mode)',
+        email: 'test@knowall.ai',
         avatarUrl: ''
       })
+      setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
       setLoading(false)
     }
   }, [])
 
-  // Generate QR code when sat amount changes
+  // Generate QR code when sat amount or lightning address changes
   useEffect(() => {
     const generateQR = async () => {
+      if (!lightningAddress) return
+
       setQrLoading(true)
       setQrError(null)
 
       try {
-        console.log(`Generating QR for ${selectedSats} sats to ${LIGHTNING_ADDRESS}`)
+        console.log(`Generating QR for ${selectedSats} sats to ${lightningAddress}`)
         const { qrDataUrl, lnurlString } = await generateLightningQR(
-          LIGHTNING_ADDRESS,
+          lightningAddress,
           selectedSats
         )
         setQrData(qrDataUrl)
@@ -77,7 +141,7 @@ function App() {
     }
 
     generateQR()
-  }, [selectedSats])
+  }, [selectedSats, lightningAddress])
 
   const handleSatSelection = (sats) => {
     setSelectedSats(sats)
@@ -130,15 +194,8 @@ function App() {
 
   return (
     <div className="app-container">
-      <div className="header">
-        <div className="header-left">
-          <div className="logo">⚡</div>
-          <h1 className="title">Zapdesk by KnowAll AI</h1>
-        </div>
-      </div>
-
       <div className="content">
-        <h2 className="subtitle">Tip the agent instantly with Bitcoin Lightning</h2>
+        <h2 className="subtitle">⚡ Tip {agent.name} with Bitcoin Lightning</h2>
 
         <div className="agent-info">
           <div className="agent-avatar">
@@ -149,8 +206,8 @@ function App() {
             )}
           </div>
           <div className="agent-details">
-            <div className="agent-email">{agent.email}</div>
-            <div className="agent-label">Tip the agent with sats</div>
+            <div className="agent-name">{agent.name}</div>
+            <div className="agent-label">Your support agent</div>
           </div>
         </div>
 
@@ -217,7 +274,11 @@ function App() {
         </button>
 
         <div className="footer-text">
-          This widget uses the Bitcoin Lightning to send tips directly to your support agent — Please click on the 'Mark as Paid' button manually.
+          Scan the QR code with your Lightning wallet to send the tip. Click 'Mark as Paid' after payment is complete.
+        </div>
+
+        <div className="branding">
+          Powered by <a href="https://knowall.ai" target="_blank" rel="noopener noreferrer">Zapdesk from KnowAll AI</a>
         </div>
       </div>
     </div>
