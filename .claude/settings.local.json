@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Read(//c/SkytechClouds/Skytech Cloud/Akash Skytech - Documents/KnowAll ai/zendesk-zapdesk/zendesk-zapdesk/dist/assets/**)",
+      "Bash(npm run build:*)",
+      "Read(//c/Users/Akash Jadhav/Pictures/Screenshots/**)",
+      "Bash(test:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm install:*)",
+      "WebSearch",
+      "WebFetch(domain:developer.zendesk.com)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit - Zapdesk Lightning tipping widget\n\n- React-based Bitcoin Lightning tipping widget for Zendesk Help Center\n- Dynamic QR code generation with real Lightning invoices\n- Configurable tip amounts (100, 1000, 10,000 sats)\n- Integration with Wallet of Satoshi\n- Production build ready for deployment\n\nBuilt with React, Vite, and Lightning Network APIs\nEOF\n)\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "zendesk-zapdesk-helpcenter",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Zendesk Help Center Bitcoin Lightning Tipping Widget",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-qr-code": "^2.0.15"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.5"
+  }
+}
