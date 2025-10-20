@@ -17,103 +17,121 @@ function App() {
   const [qrError, setQrError] = useState(null)
 
   useEffect(() => {
-    // Initialize Zendesk ZAF Client
-    const client = window.ZAFClient?.init()
-    setZafClient(client)
+    const initializeWidget = async () => {
+      console.log('Initializing Zapdesk widget...')
+      console.log('ZAFClient available:', typeof window.ZAFClient)
 
-    if (client) {
-      // Fetch ticket/request information
-      client.get(['ticket']).then(async (data) => {
-        const ticketData = data['ticket']
-        const ticketId = ticketData.id
+      // Check if ZAFClient is available
+      if (!window.ZAFClient) {
+        console.error('ZAFClient not found! Widget must be loaded in Zendesk Help Center.')
+        // Try waiting a bit for the script to load
+        await new Promise(resolve => setTimeout(resolve, 1000))
 
-        console.log('Ticket data:', ticketData)
-
-        try {
-          // Fetch the full request details including assignee from API
-          const requestResponse = await client.request({
-            url: `/api/v2/requests/${ticketId}.json`,
-            type: 'GET'
-          })
-
-          const requestData = JSON.parse(requestResponse.responseText)
-          const request = requestData.request
-          const assigneeId = request.assignee_id
-
-          console.log('Request data:', request)
-          console.log('Assignee ID:', assigneeId)
-
-          if (assigneeId) {
-            // Fetch assignee user details
-            const userResponse = await client.request({
-              url: `/api/v2/users/${assigneeId}.json`,
-              type: 'GET'
-            })
-
-            const userData = JSON.parse(userResponse.responseText)
-            const user = userData.user
-
-            console.log('Assignee user data:', user)
-
-            setAgent({
-              name: user.name || 'Agent',
-              email: user.email || '',
-              avatarUrl: user.photo?.content_url || ''
-            })
-
-            // Check for Lightning address in user fields or notes
-            const agentLightningAddress =
-              user.user_fields?.lightning_address ||
-              user.notes?.match(/lightning:\s*(\S+@\S+)/i)?.[1] ||
-              DEFAULT_LIGHTNING_ADDRESS
-
-            console.log('Agent Lightning address:', agentLightningAddress)
-            setLightningAddress(agentLightningAddress)
-          } else {
-            // No assignee yet
-            setAgent({
-              name: 'Unassigned',
-              email: 'No agent assigned',
-              avatarUrl: ''
-            })
-            setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
-          }
-
-          setLoading(false)
-        } catch (error) {
-          console.error('Error fetching agent info:', error)
-          // Set default agent for testing
+        if (!window.ZAFClient) {
+          console.error('ZAFClient still not available after waiting.')
           setAgent({
-            name: 'Support Agent',
-            email: 'agent@knowall.ai',
+            name: 'Error: Not in Zendesk',
+            email: 'Please embed in Help Center',
             avatarUrl: ''
           })
           setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
           setLoading(false)
+          return
         }
-      }).catch((error) => {
-        console.error('Error fetching ticket:', error)
+      }
+
+      // Initialize Zendesk ZAF Client
+      const client = window.ZAFClient.init()
+      console.log('ZAF Client initialized:', !!client)
+      setZafClient(client)
+
+      if (!client) {
+        console.error('Failed to initialize ZAF client')
         setAgent({
-          name: 'Support Agent',
-          email: 'agent@knowall.ai',
+          name: 'Error: Client Init Failed',
+          email: 'Check console for details',
           avatarUrl: ''
         })
         setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
         setLoading(false)
-      })
+        return
+      }
 
-      // Resize iframe
-      client.invoke('resize', { width: '100%', height: '700px' })
-    } else {
-      // For development without Zendesk
-      setAgent({
-        name: 'Test Agent (Dev Mode)',
-        email: 'test@knowall.ai',
-        avatarUrl: ''
-      })
-      setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
-      setLoading(false)
+      try {
+        // Fetch ticket/request information
+        const contextData = await client.get(['ticket', 'currentUser'])
+        const ticketData = contextData['ticket']
+        const ticketId = ticketData.id
+
+        console.log('Ticket ID:', ticketId)
+        console.log('Current User:', contextData['currentUser'])
+
+        // Fetch the full request details including assignee from API
+        const requestResponse = await client.request({
+          url: `/api/v2/requests/${ticketId}.json`,
+          type: 'GET'
+        })
+
+        const requestData = JSON.parse(requestResponse.responseText)
+        const request = requestData.request
+        const assigneeId = request.assignee_id
+
+        console.log('Request assignee_id:', assigneeId)
+
+        if (assigneeId) {
+          // Fetch assignee user details
+          const userResponse = await client.request({
+            url: `/api/v2/users/${assigneeId}.json`,
+            type: 'GET'
+          })
+
+          const userData = JSON.parse(userResponse.responseText)
+          const user = userData.user
+
+          console.log('Agent fetched:', user.name, user.email)
+
+          setAgent({
+            name: user.name || 'Agent',
+            email: user.email || '',
+            avatarUrl: user.photo?.content_url || ''
+          })
+
+          // Check for Lightning address in user fields or notes
+          const agentLightningAddress =
+            user.user_fields?.lightning_address ||
+            user.notes?.match(/lightning:\s*(\S+@\S+)/i)?.[1] ||
+            DEFAULT_LIGHTNING_ADDRESS
+
+          console.log('Lightning address:', agentLightningAddress)
+          setLightningAddress(agentLightningAddress)
+        } else {
+          console.warn('No assignee found for this ticket')
+          setAgent({
+            name: 'Unassigned',
+            email: 'No agent assigned yet',
+            avatarUrl: ''
+          })
+          setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
+        }
+
+        setLoading(false)
+
+        // Resize iframe
+        client.invoke('resize', { width: '100%', height: '750px' })
+      } catch (error) {
+        console.error('Error in widget initialization:', error)
+        console.error('Error details:', error.message, error.stack)
+        setAgent({
+          name: 'Error Loading Agent',
+          email: 'Check browser console',
+          avatarUrl: ''
+        })
+        setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
+        setLoading(false)
+      }
     }
+
+    initializeWidget()
   }, [])
 
   // Generate QR code when sat amount or lightning address changes
