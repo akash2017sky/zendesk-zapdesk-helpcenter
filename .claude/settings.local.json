@@ -36,7 +36,9 @@
       "Bash(npx vercel inspect dist-h5r77htee-akashjadhav1989-gmailcoms-projects.vercel.app)",
       "Bash(npx vercel inspect dist-d089d5lfn-akashjadhav1989-gmailcoms-projects.vercel.app)",
       "Bash(npx vercel inspect dist-2l2q5gg71-akashjadhav1989-gmailcoms-projects.vercel.app)",
-      "Bash(npx vercel inspect zendesk-zapdesk-helpcenter-7k5wi2j8k.vercel.app)"
+      "Bash(npx vercel inspect zendesk-zapdesk-helpcenter-7k5wi2j8k.vercel.app)",
+      "Bash(winget --version)",
+      "Bash(winget install --id GitHub.cli -e --accept-package-agreements --accept-source-agreements)"
     ],
     "deny": [],
     "ask": []
