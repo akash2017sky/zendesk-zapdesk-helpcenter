@@ -18,7 +18,12 @@
       "WebFetch(domain:zendesk-zapdesk-helpcenter-6h5xwn3zv.vercel.app)",
       "Bash(npx vercel inspect zendesk-zapdesk-helpcenter-6h5xwn3zv.vercel.app)",
       "Bash(npx vercel inspect zendesk-zapdesk-helpcenter-6h5xwn3zv.vercel.app --logs)",
-      "Bash(npx vercel inspect zendesk-zapdesk-helpcenter-k3ujyms4s.vercel.app)"
+      "Bash(npx vercel inspect zendesk-zapdesk-helpcenter-k3ujyms4s.vercel.app)",
+      "Bash(git push -u origin feature/zapdesk-hc)",
+      "Bash(gh --version)",
+      "Bash(gh auth status)",
+      "Bash(git remote set-url origin https://github.com/akash2017sky/zendesk-zapdesk-helpcenter.git)",
+      "Bash(git push -u origin main)"
     ],
     "deny": [],
     "ask": []
