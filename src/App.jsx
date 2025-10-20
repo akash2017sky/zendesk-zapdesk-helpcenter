@@ -19,115 +19,139 @@ function App() {
   useEffect(() => {
     const initializeWidget = async () => {
       console.log('Initializing Zapdesk widget...')
-      console.log('ZAFClient available:', typeof window.ZAFClient)
+      console.log('Current URL:', window.location.href)
+      console.log('Parent URL:', document.referrer)
 
-      // Check if ZAFClient is available
-      if (!window.ZAFClient) {
-        console.error('ZAFClient not found! Widget must be loaded in Zendesk Help Center.')
-        // Try waiting a bit for the script to load
-        await new Promise(resolve => setTimeout(resolve, 1000))
+      // Try to get ticket ID from multiple sources
+      let ticketId = null
 
-        if (!window.ZAFClient) {
-          console.error('ZAFClient still not available after waiting.')
-          setAgent({
-            name: 'Error: Not in Zendesk',
-            email: 'Please embed in Help Center',
-            avatarUrl: ''
-          })
-          setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
-          setLoading(false)
-          return
-        }
-      }
-
-      // Initialize Zendesk ZAF Client
-      const client = window.ZAFClient.init()
-      console.log('ZAF Client initialized:', !!client)
-      setZafClient(client)
-
-      if (!client) {
-        console.error('Failed to initialize ZAF client')
-        setAgent({
-          name: 'Error: Client Init Failed',
-          email: 'Check console for details',
-          avatarUrl: ''
-        })
-        setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
-        setLoading(false)
-        return
-      }
-
+      // Method 1: Check URL parameters first (e.g., ?ticket_id=7)
       try {
-        // Fetch ticket/request information
-        const contextData = await client.get(['ticket', 'currentUser'])
-        const ticketData = contextData['ticket']
-        const ticketId = ticketData.id
+        const urlParams = new URLSearchParams(window.location.search)
+        ticketId = urlParams.get('ticket_id') || urlParams.get('id') || urlParams.get('request_id')
 
-        console.log('Ticket ID:', ticketId)
-        console.log('Current User:', contextData['currentUser'])
+        if (ticketId) {
+          console.log('✓ Ticket ID from URL parameter:', ticketId)
+        } else {
+          console.log('No ticket_id in URL parameters')
+        }
+      } catch (error) {
+        console.error('Error parsing URL parameters:', error)
+      }
 
-        // Fetch the full request details including assignee from API
-        const requestResponse = await client.request({
-          url: `/api/v2/requests/${ticketId}.json`,
-          type: 'GET'
+      // Method 2: Try to extract from referrer URL if not in params
+      if (!ticketId) {
+        try {
+          const isInIframe = window.self !== window.top
+          console.log('Is in iframe:', isInIframe)
+
+          if (document.referrer) {
+            console.log('Full referrer URL:', document.referrer)
+
+            // Try multiple patterns to extract ticket ID
+            // Pattern 1: /requests/7
+            let match = document.referrer.match(/\/requests\/(\d+)/)
+
+            // Pattern 2: /hc/*/requests/7
+            if (!match) {
+              match = document.referrer.match(/\/hc\/[^\/]+\/requests\/(\d+)/)
+            }
+
+            // Pattern 3: ticket_id=7 or id=7 in query params
+            if (!match) {
+              match = document.referrer.match(/[?&](?:ticket_)?id=(\d+)/)
+            }
+
+            if (match) {
+              ticketId = match[1]
+              console.log('✓ Extracted ticket ID from referrer URL:', ticketId)
+            } else {
+              console.error('✗ Could not match ticket ID pattern in referrer URL')
+            }
+          } else {
+            console.log('No referrer available')
+          }
+        } catch (error) {
+          console.error('Error checking referrer:', error)
+        }
+      }
+
+      // Get agent data from URL parameters (passed from Zendesk template)
+      const urlParams = new URLSearchParams(window.location.search)
+      const agentName = urlParams.get('agent_name') || urlParams.get('assignee_name')
+      const agentEmail = urlParams.get('agent_email') || urlParams.get('assignee_email')
+      const lightningAddr = urlParams.get('lightning_address') || urlParams.get('lightning_addr')
+
+      console.log('Agent data from URL:')
+      console.log('- Name:', agentName)
+      console.log('- Email:', agentEmail)
+      console.log('- Lightning from URL:', lightningAddr)
+
+      if (agentName) {
+        console.log('✓ Using agent data from URL parameters')
+        setAgent({
+          name: agentName,
+          email: agentEmail || '',
+          avatarUrl: ''
         })
 
-        const requestData = JSON.parse(requestResponse.responseText)
-        const request = requestData.request
-        const assigneeId = request.assignee_id
+        // Fetch Lightning address from API if not provided in URL
+        if (!lightningAddr && agentEmail) {
+          console.log('Fetching Lightning address from API for:', agentEmail)
 
-        console.log('Request assignee_id:', assigneeId)
+          try {
+            const apiUrl = `${window.location.origin}/api/get-agent?agent_email=${encodeURIComponent(agentEmail)}`
+            console.log('API URL:', apiUrl)
 
-        if (assigneeId) {
-          // Fetch assignee user details
-          const userResponse = await client.request({
-            url: `/api/v2/users/${assigneeId}.json`,
-            type: 'GET'
-          })
-
-          const userData = JSON.parse(userResponse.responseText)
-          const user = userData.user
-
-          console.log('Agent fetched:', user.name, user.email)
-
-          setAgent({
-            name: user.name || 'Agent',
-            email: user.email || '',
-            avatarUrl: user.photo?.content_url || ''
-          })
-
-          // Check for Lightning address in user fields or notes
-          const agentLightningAddress =
-            user.user_fields?.lightning_address ||
-            user.notes?.match(/lightning:\s*(\S+@\S+)/i)?.[1] ||
-            DEFAULT_LIGHTNING_ADDRESS
-
-          console.log('Lightning address:', agentLightningAddress)
-          setLightningAddress(agentLightningAddress)
+            fetch(apiUrl)
+              .then(response => response.json())
+              .then(data => {
+                console.log('API Response:', data)
+                if (data.lightning_address) {
+                  console.log('✓ Lightning address from API:', data.lightning_address)
+                  setLightningAddress(data.lightning_address)
+                } else {
+                  console.warn('No Lightning address in API response, using default')
+                  setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
+                }
+              })
+              .catch(error => {
+                console.error('Error fetching Lightning address from API:', error)
+                console.log('Using default Lightning address')
+                setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
+              })
+          } catch (error) {
+            console.error('Error calling API:', error)
+            setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
+          }
         } else {
-          console.warn('No assignee found for this ticket')
-          setAgent({
-            name: 'Unassigned',
-            email: 'No agent assigned yet',
-            avatarUrl: ''
-          })
-          setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
+          setLightningAddress(lightningAddr || DEFAULT_LIGHTNING_ADDRESS)
         }
 
         setLoading(false)
-
-        // Resize iframe
-        client.invoke('resize', { width: '100%', height: '750px' })
-      } catch (error) {
-        console.error('Error in widget initialization:', error)
-        console.error('Error details:', error.message, error.stack)
+      } else {
+        console.warn('No agent data in URL parameters')
+        console.log('Please pass agent_name in the iframe URL')
         setAgent({
-          name: 'Error Loading Agent',
-          email: 'Check browser console',
+          name: 'Configuration Needed',
+          email: 'Add agent_name to iframe URL',
           avatarUrl: ''
         })
         setLightningAddress(DEFAULT_LIGHTNING_ADDRESS)
         setLoading(false)
+      }
+
+      // Try initializing ZAF Client for comment posting
+      if (window.ZAFClient) {
+        try {
+          const client = window.ZAFClient.init()
+          console.log('ZAF Client initialized for comments:', !!client)
+          if (client) {
+            setZafClient(client)
+          }
+        } catch (error) {
+          console.warn('ZAF Client init failed:', error)
+        }
       }
     }
 

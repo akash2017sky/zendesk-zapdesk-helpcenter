@@ -23,7 +23,20 @@
       "Bash(gh --version)",
       "Bash(gh auth status)",
       "Bash(git remote set-url origin https://github.com/akash2017sky/zendesk-zapdesk-helpcenter.git)",
-      "Bash(git push -u origin main)"
+      "Bash(git push -u origin main)",
+      "Bash(git config --global user.name)",
+      "Bash(git config --global user.email)",
+      "Bash(npx vercel deploy --prod --yes dist)",
+      "Bash(npx vercel --yes)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nFix agent fetching with improved error handling and logging\n\n- Add comprehensive console logging for debugging\n- Wait for ZAFClient to load before initialization\n- Improve error messages to identify issues\n- Better async/await flow for API calls\n- Fetch agent from /api/v2/requests/{ticketId} endpoint\n- Display clear error states when widget fails to load\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push origin feature/zapdesk-hc)",
+      "Bash(git remote set-url origin https://github.com/knowall-ai/zendesk-zapdesk-helpcenter.git)",
+      "Bash(npx vercel --prod --yes --name zendesk-zapdesk-helpcenter)",
+      "Read(//c/SkytechClouds/Skytech Cloud/Akash Skytech - Documents/KnowAll ai/**)",
+      "Bash(npx vercel inspect dist-h5r77htee-akashjadhav1989-gmailcoms-projects.vercel.app)",
+      "Bash(npx vercel inspect dist-d089d5lfn-akashjadhav1989-gmailcoms-projects.vercel.app)",
+      "Bash(npx vercel inspect dist-2l2q5gg71-akashjadhav1989-gmailcoms-projects.vercel.app)",
+      "Bash(npx vercel inspect zendesk-zapdesk-helpcenter-7k5wi2j8k.vercel.app)"
     ],
     "deny": [],
     "ask": []
